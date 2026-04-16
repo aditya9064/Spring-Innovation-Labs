@@ -1,0 +1,135 @@
+@import "tailwindcss";
+
+:root {
+  --cs-bg: #000000;
+  --cs-panel: #0a0a0a;
+  --cs-panel2: #111111;
+  --cs-surface: #181818;
+  --cs-border: #1e1e1e;
+  --cs-border-hi: #2a2a2a;
+  --cs-accent: #3b82f6;
+  --cs-accent-lo: rgba(59, 130, 246, 0.08);
+  --cs-accent-md: rgba(59, 130, 246, 0.18);
+  --cs-text: #e2e8f0;
+  --cs-gray1: #94a3b8;
+  --cs-gray2: #64748b;
+  --cs-gray3: #334155;
+  --cs-green: #22c55e;
+  --cs-green-lo: rgba(34, 197, 94, 0.08);
+  --cs-red: #ef4444;
+  --cs-red-lo: rgba(239, 68, 68, 0.08);
+  --cs-orange: #f97316;
+  --cs-yellow: #eab308;
+  --cs-cyan: #06b6d4;
+  --cs-amber: #f59e0b;
+  --cs-mono: "IBM Plex Mono", "Courier New", monospace;
+  --cs-sans: "Inter", system-ui, -apple-system, sans-serif;
+}
+
+html {
+  height: 100%;
+  background: var(--cs-bg);
+  color: var(--cs-text);
+  font-family: var(--cs-sans);
+  font-size: 13px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  height: 100%;
+  background: var(--cs-bg);
+  overflow-x: hidden;
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--cs-bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--cs-border-hi);
+}
+
+.maplibregl-popup-content {
+  background: transparent !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+
+.maplibregl-popup-tip {
+  display: none !important;
+}
+
+.maplibregl-ctrl-group {
+  background: var(--cs-panel) !important;
+  border: 1px solid var(--cs-border) !important;
+  border-radius: 0 !important;
+}
+
+.maplibregl-ctrl-group button {
+  border-bottom: 1px solid var(--cs-border) !important;
+}
+
+.maplibregl-ctrl-group button + button {
+  border-top: none !important;
+}
+
+.maplibregl-ctrl button .maplibregl-ctrl-icon {
+  filter: invert(1) brightness(0.7);
+}
+
+@keyframes cs-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+@keyframes cs-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 1024px) {
+  .cs-side-panel {
+    display: none !important;
+  }
+}
+
+@media print {
+  .cs-no-print {
+    display: none !important;
+  }
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  height: 4px;
+  background: var(--cs-border);
+  outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  background: var(--cs-accent);
+  cursor: pointer;
+}
+
+select {
+  cursor: pointer;
+}

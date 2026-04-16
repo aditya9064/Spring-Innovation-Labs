@@ -1,0 +1,58 @@
+{
+  "regionId": "17031010100",
+  "regionType": "census_tract",
+  "regionName": "Near North Side Example Tract",
+  "city": "Chicago",
+  "timeHorizonDays": 30,
+  "riskLevel": "elevated",
+  "baselineScore": 72,
+  "mlScore": 76,
+  "scores": {
+    "overall": 76,
+    "violent": 61,
+    "property": 82
+  },
+  "drivers": [
+    {
+      "name": "Recent property crime density",
+      "direction": "up",
+      "impact": "high",
+      "evidence": "Historical property incidents rose over the prior 30-day window."
+    },
+    {
+      "name": "Nightlife corridor pressure",
+      "direction": "up",
+      "impact": "medium",
+      "evidence": "High venue density and late-hour activity raise short-term volatility."
+    },
+    {
+      "name": "Transit access",
+      "direction": "flat",
+      "impact": "low",
+      "evidence": "Transit remains a stable contextual factor in this tract."
+    }
+  ],
+  "trustPassport": {
+    "confidence": "moderate",
+    "completeness": "high",
+    "freshness": "recent",
+    "sourceAgreement": "mixed",
+    "underreportingRisk": "moderate",
+    "action": "manual review"
+  },
+  "liveDisagreement": {
+    "status": "watch",
+    "summary": "Live signals suggest short-term pressure above the verified historical baseline.",
+    "delta": 8
+  },
+  "whatChanged": {
+    "summary": "The score moved up because short-term property pressure and corridor activity increased.",
+    "topChanges": [
+      "Property crime density is the largest positive driver.",
+      "One official bulletin elevated short-term concern.",
+      "Neighboring tracts are also trending upward this week."
+    ]
+  },
+  "updatedAt": "2026-04-03T09:30:00Z"
+}
+

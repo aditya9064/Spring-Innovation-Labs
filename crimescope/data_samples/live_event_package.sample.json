@@ -1,0 +1,36 @@
+{
+  "regionId": "17031010100",
+  "banner": {
+    "status": "watch",
+    "headline": "3 live signals affecting this tract",
+    "summary": "One official bulletin, one public alert, and one lower-confidence narrative signal are attached to this tract.",
+    "updatedAt": "2026-04-03T09:32:00Z"
+  },
+  "events": [
+    {
+      "id": "evt-001",
+      "title": "Official bulletin referencing commercial burglary pattern",
+      "status": "verified",
+      "confidence": "high",
+      "sourceType": "official_bulletin",
+      "occurredAt": "2026-04-03T08:15:00Z",
+      "resolvedRegionId": "17031010100",
+      "lat": 41.9021,
+      "lng": -87.6287,
+      "summary": "Pattern bulletin overlaps the current tract and two adjacent tracts."
+    },
+    {
+      "id": "evt-002",
+      "title": "Local alert about late-night vehicle break-ins",
+      "status": "reported",
+      "confidence": "medium",
+      "sourceType": "public_alert",
+      "occurredAt": "2026-04-03T05:40:00Z",
+      "resolvedRegionId": "17031010100",
+      "lat": 41.9013,
+      "lng": -87.6268,
+      "summary": "Signal is location-resolved but still awaiting stronger corroboration."
+    }
+  ]
+}
+

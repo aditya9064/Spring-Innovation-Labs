@@ -1,0 +1,90 @@
+{
+  "left": {
+    "regionId": "17031010100",
+    "regionType": "census_tract",
+    "regionName": "Near North Side Example Tract",
+    "city": "Chicago",
+    "timeHorizonDays": 30,
+    "riskLevel": "elevated",
+    "baselineScore": 72,
+    "mlScore": 76,
+    "scores": {
+      "overall": 76,
+      "violent": 61,
+      "property": 82
+    },
+    "drivers": [
+      {
+        "name": "Recent property crime density",
+        "direction": "up",
+        "impact": "high",
+        "evidence": "Historical property incidents rose over the prior 30-day window."
+      }
+    ],
+    "trustPassport": {
+      "confidence": "moderate",
+      "completeness": "high",
+      "freshness": "recent",
+      "sourceAgreement": "mixed",
+      "underreportingRisk": "moderate",
+      "action": "manual review"
+    },
+    "liveDisagreement": {
+      "status": "watch",
+      "summary": "Live signals suggest short-term pressure above the verified historical baseline.",
+      "delta": 8
+    },
+    "whatChanged": {
+      "summary": "The score moved up because short-term property pressure and corridor activity increased.",
+      "topChanges": [
+        "Property crime density is the largest positive driver.",
+        "One official bulletin elevated short-term concern."
+      ]
+    },
+    "updatedAt": "2026-04-03T09:30:00Z"
+  },
+  "right": {
+    "regionId": "17031010200",
+    "regionType": "census_tract",
+    "regionName": "West Loop Example Tract",
+    "city": "Chicago",
+    "timeHorizonDays": 30,
+    "riskLevel": "moderate",
+    "baselineScore": 60,
+    "mlScore": 62,
+    "scores": {
+      "overall": 62,
+      "violent": 49,
+      "property": 67
+    },
+    "drivers": [
+      {
+        "name": "Recent property crime density",
+        "direction": "down",
+        "impact": "medium",
+        "evidence": "Activity is below the peer-tract range for the current month."
+      }
+    ],
+    "trustPassport": {
+      "confidence": "high",
+      "completeness": "high",
+      "freshness": "recent",
+      "sourceAgreement": "aligned",
+      "underreportingRisk": "low",
+      "action": "standard review"
+    },
+    "liveDisagreement": {
+      "status": "aligned",
+      "summary": "Live signals are close to the verified historical baseline.",
+      "delta": 1
+    },
+    "whatChanged": {
+      "summary": "The score is stable relative to adjacent tracts.",
+      "topChanges": [
+        "No major live pressure was attached during the most recent refresh."
+      ]
+    },
+    "updatedAt": "2026-04-03T09:30:00Z"
+  },
+  "summary": "Near North Side Example Tract is currently modeled fourteen points higher than West Loop Example Tract."
+}

@@ -1,0 +1,17 @@
+{
+  "regionId": "17031010100",
+  "title": "Chicago tract risk summary",
+  "executiveSummary": "This tract is currently rated elevated for the next 30 days, driven primarily by property-crime pressure and reinforced by one official live bulletin.",
+  "riskDrivers": [
+    "Property crime density is above the recent tract baseline.",
+    "Nightlife corridor exposure increases short-term volatility.",
+    "Nearby tracts show similar short-term pressure."
+  ],
+  "trustNotes": [
+    "Confidence is moderate rather than high because live signals and verified history are not fully aligned.",
+    "Completeness is high for the verified historical inputs used in the current score."
+  ],
+  "compareSummary": "Compared with a moderate-risk control tract, this tract is currently modeled about fourteen points higher overall.",
+  "challengeState": "none"
+}
+

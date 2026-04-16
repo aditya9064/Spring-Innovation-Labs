@@ -1,0 +1,72 @@
+{
+  "model_type": "LGBMRegressor",
+  "target": "y_next_30d_count",
+  "target_transform": "log1p",
+  "features": [
+    "lag_1m_count",
+    "lag_2m_count",
+    "lag_3m_count",
+    "lag_6m_count",
+    "lag_12m_count",
+    "rolling_mean_3m",
+    "rolling_mean_6m",
+    "rolling_mean_12m",
+    "rolling_std_6m",
+    "rolling_max_6m",
+    "rolling_min_6m",
+    "rolling_std_12m",
+    "rolling_max_12m",
+    "rolling_min_12m",
+    "mom_change",
+    "month_of_year",
+    "month_sin",
+    "month_cos",
+    "year",
+    "total_pop_acs",
+    "median_hh_income_acs",
+    "log_pop",
+    "city_month_total",
+    "city_total_lag1",
+    "tract_share_of_city",
+    "same_month_last_year"
+  ],
+  "n_features": 26,
+  "params": {
+    "objective": "regression",
+    "metric": "rmse",
+    "learning_rate": 0.05,
+    "num_leaves": 63,
+    "max_depth": -1,
+    "min_child_samples": 20,
+    "subsample": 0.8,
+    "colsample_bytree": 0.8,
+    "n_estimators": 500,
+    "verbose": -1,
+    "random_state": 42
+  },
+  "best_iteration": 86,
+  "metrics": {
+    "mae": 2.8246,
+    "rmse": 5.0043,
+    "r2": 0.9382,
+    "baseline_mae": 3.9399,
+    "baseline_rmse": 7.0484,
+    "baseline_r2": 0.8773,
+    "mae_improvement_pct": 28.3,
+    "rmse_improvement_pct": 29.0
+  },
+  "split": {
+    "test_months": 6,
+    "test_start": "2025-07-01",
+    "n_train": 86580,
+    "n_test": 7992
+  },
+  "data": {
+    "crime_start_date": "2020-01-01",
+    "maturity_buffer_months": 3,
+    "geography": "Cook County, IL (census tract)",
+    "min_month": "2020-02-01",
+    "max_month": "2025-12-01"
+  },
+  "trained_at": "2026-04-10T18:29:43.375479Z"
+}

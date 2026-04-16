@@ -1,0 +1,30 @@
+CrimeScope ML — Evaluation Report
+==================================================
+Trained: 2026-04-10T18:29:43.375479Z
+Target: y_next_30d_count (log1p transformed)
+Geography: Cook County, IL — census tract level
+Data range: 2020-02-01 to 2025-12-01 (71 months)
+Maturity buffer: last 3 months excluded from labels
+
+Train: 86,580 rows  |  Test: 7,992 rows
+Test window: 2025-07-01 onward (6 months)
+
+Results:
+  LightGBM     — MAE: 2.8246  |  RMSE: 5.0043  |  R²: 0.9382
+  Lag-1 baseline — MAE: 3.9399  |  RMSE: 7.0484  |  R²: 0.8773
+  MAE improvement: +28.3%
+  RMSE improvement: +29.0%
+
+Best iteration: 86 / 500
+
+Top 10 features:
+  tract_share_of_city                697
+  rolling_mean_12m                   522
+  month_cos                          404
+  median_hh_income_acs               348
+  city_month_total                   336
+  year                               334
+  total_pop_acs                      313
+  month_of_year                      266
+  city_total_lag1                    246
+  lag_1m_count                       201

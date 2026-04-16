@@ -1,0 +1,10 @@
+{
+  "persona": "insurer",
+  "regionId": "17031010100",
+  "decision": "manual review",
+  "headline": "Review pricing and underwriting notes before approval.",
+  "nextStep": "Route this tract to manual underwriting review and request supplemental safeguards.",
+  "caveat": "Confidence is moderate because verified history and live signals are not fully aligned.",
+  "abstain": false
+}
+
