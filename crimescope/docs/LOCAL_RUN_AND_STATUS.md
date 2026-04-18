@@ -43,8 +43,9 @@ http://localhost:8000/docs
 | /api/reports/summary | GET | ✅ Working | Real generated data |
 | /api/reports/persona-decision | GET | ✅ Working | Real generated data |
 | /api/map/geojson | GET | ✅ Working | Real geo data (6.9MB, all Chicago tracts) |
-| /api/simulator/interventions | GET | ✅ Working | To be tested |
-| /api/chat/message | POST | ✅ Working | To be tested |
+| /api/simulator/interventions | GET | ✅ Working | Sample data |
+| /api/simulator/run | POST | ✅ Working | Real ML model (score simulation) |
+| /api/chat/message | POST | ⚠️ Needs config | Requires OPENAI_API_KEY in .env |
 
 ---
 
@@ -65,4 +66,5 @@ http://localhost:8000/docs
 - Persona decision endpoint needs Yuktha's trust/recommendation logic
 - `.env` file setup for teammates (copy `.env.example` to `.env`)
 - Docker Compose for Postgres/PostGIS and Redis (in `infra/` or root)
+- Chat endpoint needs OPENAI_API_KEY added to .env to function
 
