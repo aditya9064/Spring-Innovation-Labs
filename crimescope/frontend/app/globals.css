@@ -112,6 +112,54 @@ body {
   }
 }
 
+@keyframes cs-search-pulse {
+  0% {
+    transform: translate(-50%, -50%) scale(0.4);
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(2.6);
+    opacity: 0;
+  }
+}
+
+.cs-search-pin {
+  position: relative;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.cs-search-pin-pulse {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(34, 211, 238, 0.22);
+  border: 2px solid #22d3ee;
+  box-shadow: 0 0 24px rgba(34, 211, 238, 0.55);
+  transform: translate(-50%, -50%);
+  animation: cs-search-pulse 1.6s ease-out infinite;
+}
+
+.cs-search-pin-dot {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #22d3ee;
+  border: 2px solid #ffffff;
+  box-shadow:
+    0 0 0 2px rgba(34, 211, 238, 0.35),
+    0 0 16px rgba(34, 211, 238, 0.9),
+    0 2px 6px rgba(0, 0, 0, 0.6);
+  transform: translate(-50%, -50%);
+}
+
 @media (max-width: 1024px) {
   .cs-side-panel {
     display: none !important;

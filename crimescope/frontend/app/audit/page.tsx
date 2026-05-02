@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useAuditTrail, useAuditStats, useScores } from "../../lib/hooks";
 import { createAuditEntry } from "../../lib/api";
+import { useAppStore } from "../../lib/store";
 import { useQueryClient } from "@tanstack/react-query";
 
 function PanelHeader({ title, meta }: { title: string; meta?: string }) {
@@ -25,6 +26,7 @@ export default function AuditPage() {
   const { data: trail = [] } = useAuditTrail();
   const { data: stats } = useAuditStats();
   const { data: scores = [] } = useScores();
+  const persona = useAppStore((s) => s.persona);
   const qc = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ region_id: "", decision: "accept", rationale: "", overridden: false, override_reason: "" });
@@ -33,7 +35,7 @@ export default function AuditPage() {
     const tract = scores.find((s) => s.tract_geoid === form.region_id);
     await createAuditEntry({
       region_id: form.region_id,
-      persona: "insurer",
+      persona,
       decision: form.decision,
       rationale: form.rationale,
       risk_score: tract?.risk_score ?? 0,

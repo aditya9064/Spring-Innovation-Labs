@@ -208,7 +208,7 @@ class PricingDriver(BaseModel):
 class PricingQuote(BaseModel):
     regionId: str
     regionName: str
-    persona: Literal["insurer", "real_estate"]
+    persona: Literal["insurer", "real_estate", "resident", "business", "planner"]
     basePremium: float
     suggestedPremium: float
     riskMultiplier: float  # suggested / base

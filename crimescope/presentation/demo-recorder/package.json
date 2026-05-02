@@ -1,0 +1,13 @@
+{
+  "name": "crimescope-demo-recorder",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "record": "node record.mjs",
+    "encode": "ffmpeg -y -i out/video.webm -c:v libx264 -pix_fmt yuv420p -crf 18 -movflags +faststart out/demo.mp4"
+  },
+  "dependencies": {
+    "playwright": "^1.49.0"
+  }
+}

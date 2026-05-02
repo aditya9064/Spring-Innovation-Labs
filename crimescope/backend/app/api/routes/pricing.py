@@ -1,9 +1,13 @@
 """Pricing guidance — translate a region's risk into actuarially-shaped premium guidance.
 
-Two personas are supported in v1:
+Five personas are supported. Each frames the same underlying multiplier
+in terms the persona actually consumes:
 
-* ``insurer`` — premium surcharge guidance for an underwriting workflow.
-* ``real_estate`` — property-risk loading suggestion for listing materials.
+* ``insurer``      — premium surcharge guidance for an underwriting workflow.
+* ``real_estate``  — property-risk loading suggestion for listing materials.
+* ``resident``     — household-level safety/insurance impact on a notional baseline.
+* ``business``     — operational exposure loading for a small-business owner.
+* ``planner``      — public-sector intervention prioritisation index (no £ semantics).
 
 The suggested premium is a transparent linear loading on top of a caller-supplied
 ``base_premium``, so the API can be audited end-to-end::
@@ -32,9 +36,14 @@ _NEUTRAL_SCORE = 50.0  # tract score considered "average" risk
 # Persona-specific coefficients. alpha drives sensitivity to score deviation;
 # beta drives discrete tier loading. These are deliberately conservative so the
 # guidance stays defensible without a real actuarial calibration table.
+# Insurer is the most sensitive (it's directly priced); planner is the least
+# (it's a prioritisation index, not a £ figure).
 _PERSONA_COEFFS: dict[str, tuple[float, float]] = {
     "insurer": (0.45, 0.55),
     "real_estate": (0.25, 0.30),
+    "resident": (0.30, 0.40),
+    "business": (0.40, 0.45),
+    "planner": (0.20, 0.25),
 }
 
 _TIER_LOADING: dict[str, float] = {
@@ -48,6 +57,9 @@ _TIER_LOADING: dict[str, float] = {
 _DEFAULT_BASE_PREMIUM = {
     "insurer": 1200.0,
     "real_estate": 100.0,  # interpreted as a "risk loading on a $100 baseline"
+    "resident": 600.0,     # contents/home baseline
+    "business": 2400.0,    # small-biz commercial baseline
+    "planner": 100.0,      # treated as a 0–100 prioritisation index
 }
 
 
@@ -62,7 +74,18 @@ def _band_for(multiplier: float, persona: str) -> str:
         if multiplier >= 0.95:
             return "standard"
         return "preferred"
-    # real_estate uses gentler bands — still surfaces the same shape
+    if persona == "business":
+        # commercial bands are tighter than personal lines
+        if multiplier >= 1.65:
+            return "decline_recommended"
+        if multiplier >= 1.30:
+            return "high_risk"
+        if multiplier >= 1.10:
+            return "surcharge"
+        if multiplier >= 0.95:
+            return "standard"
+        return "preferred"
+    # real_estate / resident / planner all use the gentler shape
     if multiplier >= 1.45:
         return "high_risk"
     if multiplier >= 1.20:
@@ -178,9 +201,9 @@ def _caveats_for(score: dict[str, Any], confidence: float) -> list[str]:
 @router.get("/quote", response_model=PricingQuote)
 def get_pricing_quote(
     region_id: str = Query(..., description="Region identifier (tract / MSOA / LSOA)"),
-    persona: Literal["insurer", "real_estate"] = Query(
-        "insurer", description="Pricing persona; selects coefficients and bands."
-    ),
+    persona: Literal[
+        "insurer", "real_estate", "resident", "business", "planner"
+    ] = Query("insurer", description="Pricing persona; selects coefficients and bands."),
     base_premium: float | None = Query(
         None,
         ge=0,

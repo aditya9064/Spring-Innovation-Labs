@@ -100,9 +100,38 @@ export default function MapView() {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const geojsonRef = useRef<GeoJSON.FeatureCollection | null>(null);
+  const searchMarkerRef = useRef<maplibregl.Marker | null>(null);
   const setSelectedTract = useAppStore((s) => s.setSelectedTract);
   const initialCity = useAppStore.getState().city;
   const initialCfg = getCity(initialCity);
+
+  function clearSearchHighlight(m: maplibregl.Map | null) {
+    if (searchMarkerRef.current) {
+      searchMarkerRef.current.remove();
+      searchMarkerRef.current = null;
+    }
+    if (!m) return;
+    try {
+      if (m.getLayer("tracts-search-highlight"))
+        m.setFilter("tracts-search-highlight", ["==", "tract_geoid", ""]);
+      if (m.getLayer("tracts-search-highlight-glow"))
+        m.setFilter("tracts-search-highlight-glow", ["==", "tract_geoid", ""]);
+    } catch { /* layer may not exist yet */ }
+  }
+
+  function dropSearchPin(m: maplibregl.Map, lng: number, lat: number) {
+    if (searchMarkerRef.current) {
+      searchMarkerRef.current.remove();
+      searchMarkerRef.current = null;
+    }
+    const el = document.createElement("div");
+    el.className = "cs-search-pin";
+    el.innerHTML =
+      '<div class="cs-search-pin-pulse"></div><div class="cs-search-pin-dot"></div>';
+    searchMarkerRef.current = new maplibregl.Marker({ element: el, anchor: "center" })
+      .setLngLat([lng, lat])
+      .addTo(m);
+  }
 
   // Layer toggle subscription
   useEffect(() => {
@@ -149,6 +178,34 @@ export default function MapView() {
     return unsub;
   }, []);
 
+  // Watch for searchResult changes — apply polygon highlight, clear pin on clear
+  useEffect(() => {
+    const unsub = useAppStore.subscribe((state, prev) => {
+      if (state.searchResult === prev.searchResult) return;
+      const m = mapRef.current;
+      if (!m) return;
+      if (state.searchResult) {
+        try {
+          if (m.getLayer("tracts-search-highlight"))
+            m.setFilter("tracts-search-highlight", [
+              "==",
+              "tract_geoid",
+              state.searchResult.geoid,
+            ]);
+          if (m.getLayer("tracts-search-highlight-glow"))
+            m.setFilter("tracts-search-highlight-glow", [
+              "==",
+              "tract_geoid",
+              state.searchResult.geoid,
+            ]);
+        } catch { /* layers may still be loading */ }
+      } else {
+        clearSearchHighlight(m);
+      }
+    });
+    return unsub;
+  }, []);
+
   // Watch for flyTo requests from the store
   useEffect(() => {
     const unsub = useAppStore.subscribe((state, prev) => {
@@ -174,9 +231,12 @@ export default function MapView() {
       // we don't have a meaningful "address" to resolve and the geojson may
       // still be loading.
       if (isOverview) {
+        clearSearchHighlight(m);
         useAppStore.getState().setFlyTo(null);
         return;
       }
+
+      dropSearchPin(m, lng, lat);
 
       function findTractAtPoint(retries = 5) {
         const map = mapRef.current;
@@ -555,6 +615,46 @@ export default function MapView() {
             type: "line",
             source: "tracts",
             paint: { "line-color": "#ffffff", "line-width": 2.5 },
+            filter: ["==", "tract_geoid", ""],
+          });
+
+          // Search highlight — bright cyan border + glow on the resolved region
+          m.addLayer({
+            id: "tracts-search-highlight-glow",
+            type: "line",
+            source: "tracts",
+            paint: {
+              "line-color": "#22d3ee",
+              "line-width": [
+                "interpolate", ["linear"], ["zoom"],
+                10, 4,
+                14, 8,
+                17, 14,
+              ],
+              "line-blur": [
+                "interpolate", ["linear"], ["zoom"],
+                10, 2,
+                14, 4,
+                17, 8,
+              ],
+              "line-opacity": 0.55,
+            },
+            filter: ["==", "tract_geoid", ""],
+          });
+          m.addLayer({
+            id: "tracts-search-highlight",
+            type: "line",
+            source: "tracts",
+            paint: {
+              "line-color": "#22d3ee",
+              "line-width": [
+                "interpolate", ["linear"], ["zoom"],
+                10, 1.5,
+                14, 3,
+                17, 4.5,
+              ],
+              "line-opacity": 1,
+            },
             filter: ["==", "tract_geoid", ""],
           });
 

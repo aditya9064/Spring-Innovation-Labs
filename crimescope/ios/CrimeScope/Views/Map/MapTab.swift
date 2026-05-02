@@ -14,6 +14,8 @@ struct MapTabContainer: View {
     @State private var mapMode: MapMode = .threeD
     @State private var location = LocationManager()
     @State private var recenterNonce: Int = 0
+    @State private var searchHit: TractScore?
+    @State private var searchNonce: Int = 0
 
     var body: some View {
         @Bindable var bindable = store
@@ -33,9 +35,17 @@ struct MapTabContainer: View {
                     mode: mapMode,
                     defaultCenter: MockData.defaultCenter(forCity: store.city),
                     defaultAltitude2D: MockData.defaultAltitude(forCity: store.city),
+                    searchHighlightGeoid: searchHit?.geoid,
+                    searchHighlightCoordinate: searchHit?.centroid.clLocation,
+                    searchNonce: searchNonce,
                     onSelect: { geoid in
                         if let t = tracts.first(where: { $0.geoid == geoid }) {
                             selectedTract = t
+                            // Tapping a different tract clears the search highlight,
+                            // matching the web's clearSearchHighlight on overview/clear.
+                            if t.geoid != searchHit?.geoid {
+                                searchHit = nil
+                            }
                         }
                     }
                 )
@@ -66,6 +76,7 @@ struct MapTabContainer: View {
         }
         .onChange(of: store.city) { _, _ in
             selectedTract = nil
+            searchHit = nil
             tracts = []
             polygons = []
             Task { await load() }
@@ -79,6 +90,8 @@ struct MapTabContainer: View {
         .sheet(isPresented: $searchPresented) {
             TractSearchSheet(tracts: tracts) { tract in
                 searchPresented = false
+                searchHit = tract
+                searchNonce &+= 1
                 selectedTract = tract
             }
             .presentationDetents([.large])

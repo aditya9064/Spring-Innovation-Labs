@@ -272,7 +272,12 @@ export async function fetchRegionBreakdown(
 }
 
 // --- Pricing guidance ---
-export type PricingPersona = "insurer" | "real_estate";
+export type PricingPersona =
+  | "insurer"
+  | "real_estate"
+  | "resident"
+  | "business"
+  | "planner";
 export type PricingBand =
   | "preferred"
   | "standard"

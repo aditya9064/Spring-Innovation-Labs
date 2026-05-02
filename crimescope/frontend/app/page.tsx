@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import dynamic from "next/dynamic";
 import LocationSearch from "../components/location-search";
 import MapControls from "../components/map-controls";
@@ -24,11 +25,22 @@ export default function DashboardPage() {
   const tierFilter = useAppStore((s) => s.tierFilter);
   const chatOpen = useAppStore((s) => s.chatOpen);
   const selectedTract = useAppStore((s) => s.selectedTract);
+  const setSelectedTract = useAppStore((s) => s.setSelectedTract);
   const persona = useAppStore((s) => s.persona);
   const city = useAppStore((s) => s.city);
   const cityCfg = getCity(city);
   const { data: riskPkg } = useRiskPackage(selectedTract);
   const { data: platform } = usePlatformStatus();
+
+  // Auto-select the city's default region whenever the city changes (or on
+  // first paint with no selection). This guarantees the IntelligenceRail
+  // is always visible — without it, the persona toggle in the topbar
+  // produces no visible change on the dashboard until a region is clicked.
+  useEffect(() => {
+    if (!selectedTract) {
+      setSelectedTract(cityCfg.defaultRegionId);
+    }
+  }, [selectedTract, cityCfg.defaultRegionId, setSelectedTract]);
 
   const tiers = scores.reduce<Record<string, number>>((acc, s) => {
     acc[s.risk_tier] = (acc[s.risk_tier] || 0) + 1;

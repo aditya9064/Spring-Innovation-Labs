@@ -23,6 +23,9 @@ const BAND_META: Record<PricingBand, { label: string; bg: string; fg: string }> 
 const PERSONAS: { id: PricingPersona; label: string; defaultBase: number; baseLabel: string }[] = [
   { id: "insurer", label: "INSURER", defaultBase: 1200, baseLabel: "Base premium" },
   { id: "real_estate", label: "REAL ESTATE", defaultBase: 100, baseLabel: "Risk loading on $100" },
+  { id: "resident", label: "RESIDENT", defaultBase: 600, baseLabel: "Contents/home baseline" },
+  { id: "business", label: "BUSINESS", defaultBase: 2400, baseLabel: "Commercial baseline" },
+  { id: "planner", label: "PLANNER", defaultBase: 100, baseLabel: "Prioritisation index (0–100)" },
 ];
 
 /**

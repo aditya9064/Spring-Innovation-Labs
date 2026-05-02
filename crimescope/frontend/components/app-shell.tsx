@@ -27,6 +27,37 @@ const PERSONAS: { id: Persona; label: string; short: string }[] = [
   { id: "planner", label: "PLANNER", short: "PLN" },
 ];
 
+// Visible per-persona framing — surfaced in a slim context bar so the
+// topbar PERSONA toggle has an immediate, global, non-layout-dependent
+// effect on the UI.
+const PERSONA_CONTEXT: Record<Persona, { headline: string; framing: string; tone: string }> = {
+  insurer: {
+    headline: "UNDERWRITER VIEW",
+    framing: "Pricing-first · premium multiplier · decline thresholds",
+    tone: "var(--cs-amber)",
+  },
+  resident: {
+    headline: "RESIDENT VIEW",
+    framing: "Household safety · contents/home risk · recommended actions",
+    tone: "var(--cs-green)",
+  },
+  buyer: {
+    headline: "BUYER / REAL-ESTATE VIEW",
+    framing: "Investment stability · 12-month trend · comparable areas",
+    tone: "var(--cs-cyan)",
+  },
+  business: {
+    headline: "BUSINESS OPERATOR VIEW",
+    framing: "Commercial exposure · continuity loading · site risk",
+    tone: "var(--cs-orange)",
+  },
+  planner: {
+    headline: "URBAN PLANNER VIEW",
+    framing: "Intervention priority · underreporting risk · blind spots",
+    tone: "var(--cs-accent)",
+  },
+};
+
 const MODES: { id: ViewMode; label: string; color: string }[] = [
   { id: "verified", label: "VERIFIED", color: "var(--cs-green)" },
   { id: "blended", label: "BLENDED", color: "var(--cs-accent)" },
@@ -154,6 +185,34 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         >
           AI ANALYST
         </button>
+      </div>
+
+      {/* Persona context bar — visible global signal that PERSONA changed.
+          Renders the persona's headline + one-line framing on every page. */}
+      <div
+        className="flex items-center px-3.5 shrink-0"
+        style={{
+          height: 22,
+          background: "var(--cs-bg)",
+          borderBottom: "1px solid var(--cs-border)",
+          fontFamily: "var(--cs-mono)",
+        }}
+      >
+        <span
+          className="text-[8px] font-bold tracking-[1px] px-1.5 py-0.5 mr-2"
+          style={{
+            background: PERSONA_CONTEXT[persona].tone,
+            color: "#000",
+          }}
+        >
+          {PERSONA_CONTEXT[persona].headline}
+        </span>
+        <span
+          className="text-[9px] tracking-wide truncate"
+          style={{ color: "var(--cs-gray1)" }}
+        >
+          {PERSONA_CONTEXT[persona].framing}
+        </span>
       </div>
 
       {/* Main area: Left Nav Rail + Content */}

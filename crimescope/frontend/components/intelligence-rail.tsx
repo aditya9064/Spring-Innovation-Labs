@@ -5,14 +5,65 @@ import { useAppStore } from "../lib/store";
 import { usePricingQuote } from "../lib/hooks";
 import { getCity } from "../lib/cities";
 
-type Props = { riskPkg: TractRiskPackage; persona: string };
+import type { Persona } from "../lib/store";
+import type { PricingPersona } from "../lib/api";
 
-const PERSONA_ACTIONS: Record<string, string> = {
+type Props = { riskPkg: TractRiskPackage; persona: Persona };
+
+// What the rail HEADER calls the recommendation block.
+const PERSONA_ACTIONS: Record<Persona, string> = {
   insurer: "UNDERWRITING GUIDANCE",
-  resident: "SAFETY GUIDANCE",
+  resident: "HOUSEHOLD SAFETY GUIDANCE",
   buyer: "INVESTMENT GUIDANCE",
   business: "OPERATIONAL GUIDANCE",
-  planner: "PLANNING GUIDANCE",
+  planner: "PLANNING / INTERVENTION GUIDANCE",
+};
+
+// One-line framing shown UNDER the action label so persona changes are
+// immediately legible even before the data loads.
+const PERSONA_FRAMING: Record<Persona, string> = {
+  insurer: "Pricing-first view: premium multiplier + decline thresholds.",
+  resident: "Household view: contents/home risk and safety actions.",
+  buyer: "Buyer view: investment stability and 12-month trend.",
+  business: "Operator view: commercial exposure and continuity loading.",
+  planner: "Planner view: intervention priority and underreporting risk.",
+};
+
+// What the pricing card is labelled per persona — the *number* changes
+// meaning between £ premium, contents loading, commercial baseline, or a
+// 0–100 prioritisation index.
+const PERSONA_PRICING_LABEL: Record<Persona, string> = {
+  insurer: "PREMIUM MULTIPLIER",
+  resident: "CONTENTS/HOME LOADING",
+  buyer: "PROPERTY RISK LOADING",
+  business: "COMMERCIAL LOADING",
+  planner: "INTERVENTION PRIORITY",
+};
+
+// Map the 5 store personas → the 5 backend pricing personas (now 1:1).
+// Kept as a separate map so future renames don't break the API call.
+const PERSONA_TO_PRICING: Record<Persona, PricingPersona> = {
+  insurer: "insurer",
+  resident: "resident",
+  buyer: "real_estate",
+  business: "business",
+  planner: "planner",
+};
+
+// Persona-specific base premium defaults so the displayed £ is sensible.
+const PERSONA_BASE_PREMIUM_UK: Record<Persona, number> = {
+  insurer: 1000,
+  resident: 600,
+  buyer: 100,
+  business: 2400,
+  planner: 100,
+};
+const PERSONA_BASE_PREMIUM_US: Record<Persona, number> = {
+  insurer: 1200,
+  resident: 700,
+  buyer: 100,
+  business: 2800,
+  planner: 100,
 };
 
 const BAND_COLOR: Record<string, string> = {
@@ -27,11 +78,13 @@ export default function IntelligenceRail({ riskPkg, persona }: Props) {
   const setProvenanceOpen = useAppStore((s) => s.setProvenanceOpen);
   const city = useAppStore((s) => s.city);
   const cityCfg = getCity(city);
-  const currency = cityCfg.country === "UK" ? "£" : "$";
-  const basePremium = cityCfg.country === "UK" ? 1000 : 1200;
+  const isUK = cityCfg.country === "UK";
+  // Planner view is a 0–100 prioritisation index, not a currency.
+  const currency = persona === "planner" ? "" : isUK ? "£" : "$";
+  const basePremium = (isUK ? PERSONA_BASE_PREMIUM_UK : PERSONA_BASE_PREMIUM_US)[persona];
 
   const { data: pricing } = usePricingQuote(riskPkg.regionId, {
-    persona: persona === "insurer" ? "insurer" : "real_estate",
+    persona: PERSONA_TO_PRICING[persona],
     basePremium,
   });
 
@@ -111,7 +164,7 @@ export default function IntelligenceRail({ riskPkg, persona }: Props) {
         >
           <div className="flex items-center justify-between mb-1">
             <span className="text-[8px] font-bold tracking-[1px]" style={{ color: "var(--cs-gray2)" }}>
-              PREMIUM MULTIPLIER
+              {PERSONA_PRICING_LABEL[persona]}
             </span>
             <span
               className="text-[8px] font-bold px-1.5 py-0.5 uppercase tracking-wide"
@@ -158,10 +211,13 @@ export default function IntelligenceRail({ riskPkg, persona }: Props) {
         </div>
       )}
 
-      {/* Persona Action */}
+      {/* Persona Action — heading + framing line + recommended action chip */}
       <div className="px-2.5 py-2" style={{ borderBottom: "1px solid var(--cs-border)" }}>
-        <div className="text-[8px] font-bold tracking-[1px] mb-1" style={{ color: "var(--cs-gray2)" }}>
-          {PERSONA_ACTIONS[persona] || PERSONA_ACTIONS.insurer}
+        <div className="text-[8px] font-bold tracking-[1px] mb-0.5" style={{ color: "var(--cs-accent)" }}>
+          {PERSONA_ACTIONS[persona]}
+        </div>
+        <div className="text-[9px] mb-1.5 leading-snug" style={{ color: "var(--cs-gray1)" }}>
+          {PERSONA_FRAMING[persona]}
         </div>
         <span
           className="inline-block text-[9px] font-bold px-2 py-0.5 uppercase tracking-wide"
