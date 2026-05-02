@@ -137,3 +137,87 @@ class CompareResponse(BaseModel):
     left: CompareRegionSnapshot
     right: CompareRegionSnapshot
     summary: str
+
+
+# ---------------------------------------------------------------------------
+# Trend / forecast (real near-term risk projection)
+# ---------------------------------------------------------------------------
+
+
+class TrendPoint(BaseModel):
+    date: str  # ISO date (YYYY-MM-DD)
+    value: float
+
+
+class TrendForecastPoint(BaseModel):
+    date: str
+    value: float
+    lo: float
+    hi: float
+
+
+class RegionTrend(BaseModel):
+    regionId: str
+    regionName: str
+    metric: Literal["risk_score", "incident_rate"]
+    horizonDays: int
+    history: list[TrendPoint]
+    forecast: list[TrendForecastPoint]
+    method: str  # honest description of the forecast method
+    calibrationNote: str  # caveat about the forecast quality
+    trendDirection: Literal["rising", "falling", "stable"]
+    next30dExpected: float
+    next30dLo: float
+    next30dHi: float
+
+
+# ---------------------------------------------------------------------------
+# Crime pattern breakdown (category-level)
+# ---------------------------------------------------------------------------
+
+
+class BreakdownCategory(BaseModel):
+    category: str
+    label: str
+    count30d: int
+    share: float  # 0..1
+    trendDirection: Literal["rising", "falling", "stable"]
+    trendPct: float  # e.g. +12.5 means 12.5% higher than prior window
+
+
+class RegionBreakdown(BaseModel):
+    regionId: str
+    regionName: str
+    windowDays: int
+    total30d: int
+    categories: list[BreakdownCategory]
+    note: str  # provenance note
+
+
+# ---------------------------------------------------------------------------
+# Pricing guidance (insurer + real-estate personas)
+# ---------------------------------------------------------------------------
+
+
+class PricingDriver(BaseModel):
+    name: str
+    contributionPct: float  # signed; +12.5 means this driver adds 12.5% to the multiplier
+    evidence: str
+
+
+class PricingQuote(BaseModel):
+    regionId: str
+    regionName: str
+    persona: Literal["insurer", "real_estate"]
+    basePremium: float
+    suggestedPremium: float
+    riskMultiplier: float  # suggested / base
+    band: Literal["preferred", "standard", "surcharge", "high_risk", "decline_recommended"]
+    drivers: list[PricingDriver]
+    confidence: float  # 0..1
+    methodology: str
+    alpha: float
+    beta: float
+    riskFactor: float
+    tierLoading: float
+    caveats: list[str]

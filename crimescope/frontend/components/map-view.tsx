@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import maplibregl from "maplibre-gl";
 import { useAppStore } from "../lib/store";
 import { fetchGeoJSON } from "../lib/api";
+import { getCity } from "../lib/cities";
 
 const TIER_COLORS: Record<string, string> = {
   Critical: "#ef4444",
@@ -66,11 +67,42 @@ function getCentroid(feature: GeoJSON.Feature): [number, number] | null {
   return null;
 }
 
+function buildPointsFC(geojson: GeoJSON.FeatureCollection): GeoJSON.FeatureCollection {
+  const points: GeoJSON.Feature[] = [];
+  for (const f of geojson.features) {
+    const c = getCentroid(f);
+    if (!c) continue;
+    const score = (f.properties?.risk_score as number) ?? 0;
+    points.push({
+      type: "Feature",
+      geometry: { type: "Point", coordinates: c },
+      properties: f.properties,
+    });
+    if (score > 40) {
+      const count = Math.floor(score / 15);
+      for (let i = 0; i < count; i++) {
+        const jitter = 0.003;
+        points.push({
+          type: "Feature",
+          geometry: {
+            type: "Point",
+            coordinates: [c[0] + (Math.random() - 0.5) * jitter, c[1] + (Math.random() - 0.5) * jitter],
+          },
+          properties: { ...f.properties },
+        });
+      }
+    }
+  }
+  return { type: "FeatureCollection", features: points };
+}
+
 export default function MapView() {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const geojsonRef = useRef<GeoJSON.FeatureCollection | null>(null);
   const setSelectedTract = useAppStore((s) => s.setSelectedTract);
+  const initialCity = useAppStore.getState().city;
+  const initialCfg = getCity(initialCity);
 
   // Layer toggle subscription
   useEffect(() => {
@@ -98,6 +130,25 @@ export default function MapView() {
     return unsub;
   }, []);
 
+  // Watch for city changes — re-fetch the city's GeoJSON and swap source data
+  useEffect(() => {
+    const unsub = useAppStore.subscribe((state, prev) => {
+      if (state.city === prev.city) return;
+      const m = mapRef.current;
+      if (!m) return;
+      fetchGeoJSON(state.city)
+        .then((geojson) => {
+          geojsonRef.current = geojson;
+          const tractSrc = m.getSource("tracts") as maplibregl.GeoJSONSource | undefined;
+          if (tractSrc) tractSrc.setData(geojson);
+          const pointsSrc = m.getSource("crime-points") as maplibregl.GeoJSONSource | undefined;
+          if (pointsSrc) pointsSrc.setData(buildPointsFC(geojson));
+        })
+        .catch((err) => console.error("[MapView] city switch geojson load failed", err));
+    });
+    return unsub;
+  }, []);
+
   // Watch for flyTo requests from the store
   useEffect(() => {
     const unsub = useAppStore.subscribe((state, prev) => {
@@ -107,15 +158,25 @@ export default function MapView() {
 
       const { lng, lat, zoom, address } = state.flyTo;
       const FLY_DURATION = 3000;
+      // City-overview flights pass zoom ≤ 12; address searches pass ~14.
+      const isOverview = zoom <= 12;
 
       m.flyTo({
         center: [lng, lat],
-        zoom: Math.max(zoom, 15),
-        pitch: 72,
-        bearing: m.getBearing() + 20,
+        zoom,
+        pitch: isOverview ? 45 : 72,
+        bearing: isOverview ? 0 : m.getBearing() + 20,
         duration: FLY_DURATION,
         essential: true,
       });
+
+      // Skip point-in-polygon tract resolution for city-overview flights —
+      // we don't have a meaningful "address" to resolve and the geojson may
+      // still be loading.
+      if (isOverview) {
+        useAppStore.getState().setFlyTo(null);
+        return;
+      }
 
       function findTractAtPoint(retries = 5) {
         const map = mapRef.current;
@@ -191,10 +252,10 @@ export default function MapView() {
       container: containerRef.current,
       style:
         "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
-      center: [-87.635, 41.878],
-      zoom: 15,
-      pitch: 72,
-      bearing: -30,
+      center: initialCfg.defaultCenter,
+      zoom: initialCfg.defaultZoom,
+      pitch: 60,
+      bearing: -20,
       maxPitch: 85,
       antialias: true,
     });
@@ -305,49 +366,15 @@ export default function MapView() {
         });
       }
 
-      // --- Load crime data ---
-      fetchGeoJSON()
+      // --- Load crime data for the currently selected city ---
+      fetchGeoJSON(useAppStore.getState().city)
         .then((geojson) => {
           if (m.getSource("tracts")) return;
 
           geojsonRef.current = geojson;
           m.addSource("tracts", { type: "geojson", data: geojson });
 
-          // Build centroid points with scattered sub-points for denser heatmap
-          const points: GeoJSON.Feature[] = [];
-          for (const f of geojson.features) {
-            const c = getCentroid(f);
-            if (!c) continue;
-            const score = (f.properties?.risk_score as number) ?? 0;
-            points.push({
-              type: "Feature",
-              geometry: { type: "Point", coordinates: c },
-              properties: f.properties,
-            });
-            // Scatter extra points around high-crime centroids for denser heat
-            if (score > 40) {
-              const count = Math.floor(score / 15);
-              for (let i = 0; i < count; i++) {
-                const jitter = 0.003;
-                points.push({
-                  type: "Feature",
-                  geometry: {
-                    type: "Point",
-                    coordinates: [
-                      c[0] + (Math.random() - 0.5) * jitter,
-                      c[1] + (Math.random() - 0.5) * jitter,
-                    ],
-                  },
-                  properties: { ...f.properties },
-                });
-              }
-            }
-          }
-
-          const pointsFC: GeoJSON.FeatureCollection = {
-            type: "FeatureCollection",
-            features: points,
-          };
+          const pointsFC = buildPointsFC(geojson);
           m.addSource("crime-points", { type: "geojson", data: pointsFC });
 
           const below3D = m.getLayer("3d-buildings") ? "3d-buildings" : undefined;
@@ -583,9 +610,88 @@ export default function MapView() {
             popup.remove();
           });
 
+          const clickPopup = new maplibregl.Popup({
+            closeButton: true,
+            closeOnClick: true,
+            className: "crimescope-click-popup",
+            offset: 18,
+            maxWidth: "280px",
+          });
+
           m.on("click", "tracts-interact", (e) => {
-            const geoid = e.features?.[0]?.properties?.tract_geoid;
-            if (geoid) setSelectedTract(geoid as string);
+            const f = e.features?.[0];
+            if (!f) return;
+            const p = f.properties!;
+            const geoid = p.tract_geoid as string;
+            setSelectedTract(geoid);
+
+            popup.remove();
+
+            const score = Number(p.risk_score) || 0;
+            const tier = (p.risk_tier as string) || "Unknown";
+            const tc = TIER_COLORS[tier] || "#64748b";
+            const violent = Number(p.violent_score) || 0;
+            const property = Number(p.property_score) || 0;
+            const other = Math.max(0, score - violent - property);
+
+            const total = violent + property + other || 1;
+            const pctV = Math.round((violent / total) * 100);
+            const pctP = Math.round((property / total) * 100);
+            const pctO = 100 - pctV - pctP;
+
+            const dominant = pctP >= pctV ? "property" : "violent";
+            const insight = `Risk is driven primarily by high ${dominant} crime relative to neighboring regions.`;
+
+            const name = (p.name as string) || `Tract ${geoid.slice(-6)}`;
+
+            clickPopup
+              .setLngLat(e.lngLat)
+              .setHTML(
+                `<div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#e2e8f0;background:rgba(5,5,12,0.97);padding:14px 16px;border:1px solid ${tc}55;min-width:230px;backdrop-filter:blur(12px);box-shadow:0 12px 40px rgba(0,0,0,0.7)">
+                  <div style="font-weight:700;font-size:13px;margin-bottom:8px;letter-spacing:0.3px">${name}</div>
+
+                  <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:4px">
+                    <span style="font-size:9px;color:#94a3b8;font-weight:600;letter-spacing:0.5px">RISK SCORE</span>
+                  </div>
+                  <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:6px">
+                    <span style="color:${tc};font-weight:800;font-size:26px;line-height:1">${score}</span>
+                    <span style="color:#475569;font-size:11px">/ 100</span>
+                    <span style="padding:2px 7px;font-size:8px;font-weight:700;background:${tc}20;color:${tc};border:1px solid ${tc}40;text-transform:uppercase;letter-spacing:0.8px;margin-left:auto">${tier}</span>
+                  </div>
+
+                  <div style="height:4px;background:#1e293b;border-radius:2px;margin-bottom:12px;overflow:hidden">
+                    <div style="height:100%;width:${Math.max(score, 3)}%;background:${tc};border-radius:2px"></div>
+                  </div>
+
+                  <div style="font-size:9px;color:#94a3b8;font-weight:600;letter-spacing:0.5px;margin-bottom:6px">BREAKDOWN</div>
+                  <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:12px">
+                    <div style="display:flex;justify-content:space-between;align-items:center">
+                      <span style="color:#cbd5e1">Property crime</span>
+                      <span style="font-weight:700;color:#f97316">${pctP}%</span>
+                    </div>
+                    <div style="height:3px;background:#1e293b;border-radius:2px;overflow:hidden">
+                      <div style="height:100%;width:${pctP}%;background:#f97316;border-radius:2px"></div>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;align-items:center">
+                      <span style="color:#cbd5e1">Violent crime</span>
+                      <span style="font-weight:700;color:#ef4444">${pctV}%</span>
+                    </div>
+                    <div style="height:3px;background:#1e293b;border-radius:2px;overflow:hidden">
+                      <div style="height:100%;width:${pctV}%;background:#ef4444;border-radius:2px"></div>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;align-items:center">
+                      <span style="color:#cbd5e1">Other</span>
+                      <span style="font-weight:700;color:#64748b">${pctO}%</span>
+                    </div>
+                    <div style="height:3px;background:#1e293b;border-radius:2px;overflow:hidden">
+                      <div style="height:100%;width:${pctO}%;background:#64748b;border-radius:2px"></div>
+                    </div>
+                  </div>
+
+                  <div style="padding:8px 10px;background:rgba(59,130,246,0.08);border-left:2px solid #3b82f6;font-size:10px;color:#93c5fd;line-height:1.5;font-style:italic">${insight}</div>
+                </div>`,
+              )
+              .addTo(m);
           });
         })
         .catch(console.error);

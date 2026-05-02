@@ -97,46 +97,79 @@ async function get<T>(path: string): Promise<T> {
   return res.json();
 }
 
-export async function fetchScores(): Promise<TractScore[]> {
-  const data = await get<{ tracts: TractScore[] }>("/api/regions/scores");
+function withCity(path: string, city?: string | null): string {
+  if (!city) return path;
+  const sep = path.includes("?") ? "&" : "?";
+  return `${path}${sep}city=${encodeURIComponent(city)}`;
+}
+
+export async function fetchScores(city?: string | null): Promise<TractScore[]> {
+  const data = await get<{ tracts: TractScore[] }>(withCity("/api/regions/scores", city));
   return data.tracts;
 }
 
-export async function fetchTiers(): Promise<TierSummary[]> {
-  return get<TierSummary[]>("/api/regions/tiers");
+export async function fetchTiers(city?: string | null): Promise<TierSummary[]> {
+  return get<TierSummary[]>(withCity("/api/regions/tiers", city));
 }
 
-export async function fetchGeoJSON(): Promise<GeoJSON.FeatureCollection> {
-  return get<GeoJSON.FeatureCollection>("/api/map/geojson");
+export async function fetchGeoJSON(city?: string | null): Promise<GeoJSON.FeatureCollection> {
+  return get<GeoJSON.FeatureCollection>(withCity("/api/map/geojson", city));
 }
 
 export async function fetchLiveEvents(
   regionId?: string,
+  city?: string | null,
 ): Promise<LiveEvent[]> {
-  const q = regionId ? `?region_id=${regionId}` : "";
-  return get<LiveEvent[]>(`/api/live/feed${q}`);
+  let path = `/api/live/feed`;
+  if (regionId) path += `?region_id=${regionId}`;
+  return get<LiveEvent[]>(withCity(path, city));
 }
 
-export async function fetchLiveBanner(regionId?: string): Promise<LiveBanner> {
-  const q = regionId ? `?region_id=${regionId}` : "";
-  return get<LiveBanner>(`/api/live/banner${q}`);
+export async function fetchLiveBanner(regionId?: string, city?: string | null): Promise<LiveBanner> {
+  let path = `/api/live/banner`;
+  if (regionId) path += `?region_id=${regionId}`;
+  return get<LiveBanner>(withCity(path, city));
 }
 
-export async function fetchBlindSpots(): Promise<TractScore[]> {
-  const data = await get<{ blind_spots: TractScore[] }>("/api/regions/blind-spots");
+// Re-export contract types for risk package
+export type { TractRiskPackage, TrustPassport, Driver } from "./contracts";
+
+export async function fetchRiskPackage(
+  regionId: string,
+  city?: string | null,
+): Promise<import("./contracts").TractRiskPackage> {
+  return get<import("./contracts").TractRiskPackage>(
+    withCity(`/api/regions/risk-package?region_id=${regionId}`, city),
+  );
+}
+
+export async function fetchBlindSpots(city?: string | null): Promise<TractScore[]> {
+  const data = await get<{ blind_spots: TractScore[] }>(withCity("/api/regions/blind-spots", city));
   return data.blind_spots;
 }
 
-export async function fetchReportSummary(regionId: string): Promise<ReportSummary> {
-  return get<ReportSummary>(`/api/reports/summary?region_id=${regionId}`);
+export async function fetchReportSummary(
+  regionId: string,
+  city?: string | null,
+): Promise<ReportSummary> {
+  return get<ReportSummary>(withCity(`/api/reports/summary?region_id=${regionId}`, city));
 }
 
-export async function fetchPersonaDecision(regionId: string): Promise<PersonaDecision> {
-  return get<PersonaDecision>(`/api/reports/persona-decision?region_id=${regionId}`);
+export async function fetchPersonaDecision(
+  regionId: string,
+  city?: string | null,
+): Promise<PersonaDecision> {
+  return get<PersonaDecision>(withCity(`/api/reports/persona-decision?region_id=${regionId}`, city));
 }
 
-export async function fetchCompare(leftId: string, rightId: string): Promise<CompareResponse> {
-  return get<CompareResponse>(`/api/compare?left_region_id=${leftId}&right_region_id=${rightId}`);
+export async function fetchCompare(
+  leftId: string,
+  rightId: string,
+  city?: string | null,
+): Promise<CompareResponse> {
+  return get<CompareResponse>(
+    withCity(`/api/compare?left_region_id=${leftId}&right_region_id=${rightId}`, city),
+  );
 }
 
 // --- Simulator ---
@@ -166,14 +199,118 @@ export async function fetchInterventions(): Promise<Intervention[]> {
 export async function runSimulation(
   regionId: string,
   interventions: { id: string; intensity: number }[],
+  city?: string | null,
 ): Promise<SimulationResult> {
-  const res = await fetch(`${API}/api/simulator/run`, {
+  const res = await fetch(`${API}${withCity("/api/simulator/run", city)}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ region_id: regionId, interventions }),
+    body: JSON.stringify({ region_id: regionId, interventions, city: city ?? undefined }),
   });
   if (!res.ok) throw new Error(`API ${res.status}`);
   return res.json();
+}
+
+// --- Trend / forecast (real near-term risk projection) ---
+export type TrendPoint = { date: string; value: number };
+export type TrendForecastPoint = { date: string; value: number; lo: number; hi: number };
+export type RegionTrend = {
+  regionId: string;
+  regionName: string;
+  metric: "risk_score" | "incident_rate";
+  horizonDays: number;
+  history: TrendPoint[];
+  forecast: TrendForecastPoint[];
+  method: string;
+  calibrationNote: string;
+  trendDirection: "rising" | "falling" | "stable";
+  next30dExpected: number;
+  next30dLo: number;
+  next30dHi: number;
+};
+
+export async function fetchRegionTrend(
+  regionId: string,
+  options: {
+    horizonDays?: number;
+    metric?: "risk_score" | "incident_rate";
+    city?: string | null;
+  } = {},
+): Promise<RegionTrend> {
+  const { horizonDays = 30, metric = "incident_rate", city } = options;
+  const path = `/api/regions/trend?region_id=${encodeURIComponent(
+    regionId,
+  )}&horizon_days=${horizonDays}&metric=${metric}`;
+  return get<RegionTrend>(withCity(path, city));
+}
+
+// --- Crime pattern breakdown ---
+export type BreakdownCategory = {
+  category: string;
+  label: string;
+  count30d: number;
+  share: number;
+  trendDirection: "rising" | "falling" | "stable";
+  trendPct: number;
+};
+
+export type RegionBreakdown = {
+  regionId: string;
+  regionName: string;
+  windowDays: number;
+  total30d: number;
+  categories: BreakdownCategory[];
+  note: string;
+};
+
+export async function fetchRegionBreakdown(
+  regionId: string,
+  city?: string | null,
+): Promise<RegionBreakdown> {
+  return get<RegionBreakdown>(
+    withCity(`/api/regions/breakdown?region_id=${encodeURIComponent(regionId)}`, city),
+  );
+}
+
+// --- Pricing guidance ---
+export type PricingPersona = "insurer" | "real_estate";
+export type PricingBand =
+  | "preferred"
+  | "standard"
+  | "surcharge"
+  | "high_risk"
+  | "decline_recommended";
+export type PricingDriver = { name: string; contributionPct: number; evidence: string };
+
+export type PricingQuote = {
+  regionId: string;
+  regionName: string;
+  persona: PricingPersona;
+  basePremium: number;
+  suggestedPremium: number;
+  riskMultiplier: number;
+  band: PricingBand;
+  drivers: PricingDriver[];
+  confidence: number;
+  methodology: string;
+  alpha: number;
+  beta: number;
+  riskFactor: number;
+  tierLoading: number;
+  caveats: string[];
+};
+
+export async function fetchPricingQuote(
+  regionId: string,
+  options: {
+    persona?: PricingPersona;
+    basePremium?: number;
+    city?: string | null;
+  } = {},
+): Promise<PricingQuote> {
+  const { persona = "insurer", basePremium, city } = options;
+  let path = `/api/pricing/quote?region_id=${encodeURIComponent(regionId)}&persona=${persona}`;
+  if (basePremium !== undefined) path += `&base_premium=${basePremium}`;
+  return get<PricingQuote>(withCity(path, city));
 }
 
 // --- Audit Trail ---
@@ -273,3 +410,63 @@ export async function fetchChallengeStats(): Promise<ChallengeStats> {
 export const WS_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000")
   .replace("http://", "ws://")
   .replace("https://", "wss://");
+
+// --- Platform status (which Databricks features are wired) ---
+export type PlatformStatus = {
+  status: string;
+  data_store_pref: string;
+  backends_by_city: Record<string, "lakebase" | "postgres" | "json">;
+  lakebase_configured: boolean;
+  genie_configured: boolean;
+  model_serving_configured: boolean;
+  openai_configured: boolean;
+};
+
+export async function fetchPlatformStatus(): Promise<PlatformStatus> {
+  return get<PlatformStatus>("/api/health/platform");
+}
+
+// --- Genie (Databricks natural-language Q&A) ---
+export type GenieSuggestion = { label: string; prompt: string };
+
+export type GenieSuggestionResponse = {
+  city: string;
+  label: string;
+  geography: string;
+  suggestions: GenieSuggestion[];
+  configured: boolean;
+};
+
+export type GenieQueryResponse = {
+  enabled: boolean;
+  answer?: string | null;
+  sql?: string | null;
+  rows?: Record<string, unknown>[] | null;
+  columns?: string[] | null;
+  conversation_id?: string | null;
+  message_id?: string | null;
+  error?: string | null;
+};
+
+export async function fetchGenieSuggestions(
+  city?: string | null,
+): Promise<GenieSuggestionResponse> {
+  return get<GenieSuggestionResponse>(withCity("/api/genie/suggestions", city));
+}
+
+export async function genieQuery(
+  message: string,
+  options: { city?: string | null; conversationId?: string | null } = {},
+): Promise<GenieQueryResponse> {
+  const res = await fetch(`${API}/api/genie/query`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      message,
+      city: options.city ?? undefined,
+      conversation_id: options.conversationId ?? undefined,
+    }),
+  });
+  if (!res.ok) throw new Error(`API ${res.status}`);
+  return res.json();
+}

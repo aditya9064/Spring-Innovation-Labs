@@ -1,6 +1,5 @@
 "use client";
 
-import NavHeader from "../../components/nav-header";
 import { useBlindSpots, useScores } from "../../lib/hooks";
 import type { TractScore } from "../../lib/api";
 
@@ -134,10 +133,9 @@ export default function BlindSpotsPage() {
 
   return (
     <div
-      className="flex flex-col h-screen overflow-hidden"
+      className="flex flex-col flex-1 overflow-hidden"
       style={{ background: "var(--cs-bg)" }}
     >
-      <NavHeader />
 
       {/* KPI Row */}
       <div

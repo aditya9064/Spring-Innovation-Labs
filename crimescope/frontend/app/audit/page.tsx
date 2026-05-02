@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import NavHeader from "../../components/nav-header";
 import { useAuditTrail, useAuditStats, useScores } from "../../lib/hooks";
 import { createAuditEntry } from "../../lib/api";
 import { useQueryClient } from "@tanstack/react-query";
@@ -56,8 +55,7 @@ export default function AuditPage() {
   ];
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden" style={{ background: "var(--cs-bg)" }}>
-      <NavHeader />
+    <div className="flex flex-col flex-1 overflow-hidden" style={{ background: "var(--cs-bg)" }}>
 
       {/* KPI Row */}
       <div className="flex shrink-0" style={{ borderBottom: "1px solid var(--cs-border)", fontFamily: "var(--cs-mono)" }}>

@@ -2,32 +2,40 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useAppStore } from "../lib/store";
-import { useScores } from "../lib/hooks";
+import { useScores, useGenieSuggestions, usePlatformStatus } from "../lib/hooks";
+import { getCity, type CityConfig } from "../lib/cities";
 import type { TractScore } from "../lib/api";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-function generateFallback(query: string, scores: TractScore[], selectedTract: string | null): string {
+function generateFallback(
+  query: string,
+  scores: TractScore[],
+  selectedTract: string | null,
+  cityCfg: CityConfig,
+): string {
   const q = query.toLowerCase();
   const selected = selectedTract ? scores.find((s) => s.tract_geoid === selectedTract) : null;
+  const Unit = cityCfg.geographyUnit.charAt(0).toUpperCase() + cityCfg.geographyUnit.slice(1);
+  const unitsLower = cityCfg.geographyUnitPlural.toLowerCase();
 
   if (q.includes("risk") && q.includes("score") && selected) {
-    return `Tract ${selected.name || selected.tract_geoid} has a risk score of ${Math.round(selected.risk_score)}/100 (${selected.risk_tier} tier). The model predicts approximately ${selected.predicted_next_30d.toFixed(0)} incidents over the next 30 days.`;
+    return `${Unit} ${selected.name || selected.tract_geoid} has a risk score of ${Math.round(selected.risk_score)}/100 (${selected.risk_tier} tier). The model predicts approximately ${selected.predicted_next_30d.toFixed(0)} incidents over the next 30 days.`;
   }
   if ((q.includes("highest") || q.includes("top") || q.includes("worst")) && q.includes("risk")) {
     const top5 = [...scores].sort((a, b) => b.risk_score - a.risk_score).slice(0, 5);
     const lines = top5.map((s, i) => `${i + 1}. ${s.name || s.tract_geoid} — Score: ${Math.round(s.risk_score)} (${s.risk_tier})`);
-    return `Top 5 highest-risk tracts:\n\n${lines.join("\n")}`;
+    return `Top 5 highest-risk ${unitsLower}:\n\n${lines.join("\n")}`;
   }
   if (q.includes("safest") || q.includes("lowest") || q.includes("best")) {
     const bottom5 = [...scores].sort((a, b) => a.risk_score - b.risk_score).slice(0, 5);
     const lines = bottom5.map((s, i) => `${i + 1}. ${s.name || s.tract_geoid} — Score: ${Math.round(s.risk_score)} (${s.risk_tier})`);
-    return `Top 5 lowest-risk tracts:\n\n${lines.join("\n")}`;
+    return `Top 5 lowest-risk ${unitsLower}:\n\n${lines.join("\n")}`;
   }
   if (selected) {
-    return `Viewing Tract ${selected.name || selected.tract_geoid}.\nRisk Score: ${Math.round(selected.risk_score)}/100 (${selected.risk_tier})\nPredicted (30d): ${selected.predicted_next_30d.toFixed(0)} incidents`;
+    return `Viewing ${Unit} ${selected.name || selected.tract_geoid}.\nRisk Score: ${Math.round(selected.risk_score)}/100 (${selected.risk_tier})\nPredicted (30d): ${selected.predicted_next_30d.toFixed(0)} incidents`;
   }
-  return `CrimeScope AI is analyzing ${scores.length} census tracts. Try:\n> "What are the highest risk areas?"\n> "Show tier breakdown"\n> "Portfolio overview"`;
+  return `CrimeScope AI is analyzing ${scores.length} ${unitsLower} in ${cityCfg.shortLabel}. Try:\n> "What are the highest risk areas?"\n> "Show tier breakdown"\n> "Portfolio overview"`;
 }
 
 export default function AIChatPanel() {
@@ -35,7 +43,11 @@ export default function AIChatPanel() {
   const messages = useAppStore((s) => s.chatMessages);
   const addMessage = useAppStore((s) => s.addChatMessage);
   const selectedTract = useAppStore((s) => s.selectedTract);
+  const city = useAppStore((s) => s.city);
+  const cityCfg = getCity(city);
   const { data: scores = [] } = useScores();
+  const { data: genie } = useGenieSuggestions();
+  const { data: platform } = usePlatformStatus();
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);
   const [streamText, setStreamText] = useState("");
@@ -82,6 +94,7 @@ export default function AIChatPanel() {
           message: userMsg,
           tract_context: tractCtx,
           history,
+          city,
         }),
         signal: controller.signal,
       });
@@ -140,7 +153,7 @@ export default function AIChatPanel() {
         addMessage({ role: "assistant", content: response || "No response received.", timestamp: Date.now() });
       } catch (err) {
         if ((err as Error).name === "AbortError") return;
-        const fallback = generateFallback(trimmed, scores, selectedTract);
+        const fallback = generateFallback(trimmed, scores, selectedTract, cityCfg);
         addMessage({
           role: "assistant",
           content: `[LLM unavailable — using local analysis]\n\n${fallback}`,
@@ -149,7 +162,7 @@ export default function AIChatPanel() {
       }
     } else {
       await new Promise((r) => setTimeout(r, 400 + Math.random() * 600));
-      const response = generateFallback(trimmed, scores, selectedTract);
+      const response = generateFallback(trimmed, scores, selectedTract, cityCfg);
       addMessage({ role: "assistant", content: response, timestamp: Date.now() });
     }
 
@@ -184,14 +197,18 @@ export default function AIChatPanel() {
           AI INTELLIGENCE CHAT
         </span>
         <span className="flex items-center gap-1.5">
-          {llmAvailable && (
+          {(platform?.genie_configured || llmAvailable) && (
             <span
               className="inline-block w-1.5 h-1.5 rounded-full"
               style={{ background: "var(--cs-green)", animation: "cs-pulse 2s ease-in-out infinite" }}
             />
           )}
           <span className="text-[9px]" style={{ color: "var(--cs-gray2)" }}>
-            {llmAvailable ? "GPT-4o mini" : "LOCAL"}
+            {platform?.genie_configured
+              ? "GENIE · UC"
+              : llmAvailable
+                ? "GPT-4o mini"
+                : "LOCAL"}
           </span>
         </span>
       </div>
@@ -199,14 +216,54 @@ export default function AIChatPanel() {
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-2.5 py-2 space-y-2">
         {messages.length === 0 && (
-          <div
-            className="text-[10px] py-4 text-center"
-            style={{ color: "var(--cs-gray2)", fontFamily: "var(--cs-mono)" }}
-          >
-            {llmAvailable
-              ? "AI-powered analysis. Ask about crime risk, tracts, trends, or underwriting."
-              : "Local analysis mode. Ask about crime risk, tracts, trends, or underwriting."}
-          </div>
+          <>
+            <div
+              className="text-[10px] py-3 text-center"
+              style={{ color: "var(--cs-gray2)", fontFamily: "var(--cs-mono)" }}
+            >
+              {platform?.genie_configured
+                ? `Ask the lakehouse in English — Genie writes governed SQL against Unity Catalog and answers below.`
+                : llmAvailable
+                  ? `AI-powered analysis. Ask about crime risk, ${cityCfg.geographyUnitPlural.toLowerCase()}, trends, or underwriting.`
+                  : `Local analysis mode. Ask about crime risk, ${cityCfg.geographyUnitPlural.toLowerCase()}, trends, or underwriting.`}
+            </div>
+            {genie && genie.suggestions.length > 0 && (
+              <div className="px-1 pb-2">
+                <div
+                  className="text-[8px] font-bold tracking-[1px] mb-1.5 px-1"
+                  style={{ color: "var(--cs-accent)", fontFamily: "var(--cs-mono)" }}
+                >
+                  {genie.configured ? "GENIE QUERIES · " : "EXAMPLE QUERIES · "}
+                  {genie.label.toUpperCase()}
+                </div>
+                <div className="flex flex-col gap-1">
+                  {genie.suggestions.map((s) => (
+                    <button
+                      key={s.label}
+                      onClick={() => setInput(s.prompt)}
+                      className="text-left px-2 py-1.5 transition-colors"
+                      style={{
+                        background: "var(--cs-panel2)",
+                        border: "1px solid var(--cs-border)",
+                        fontFamily: "var(--cs-mono)",
+                      }}
+                    >
+                      <div className="text-[9px] font-bold" style={{ color: "var(--cs-text)" }}>
+                        {s.label}
+                      </div>
+                      <div
+                        className="text-[8px] mt-0.5 truncate"
+                        style={{ color: "var(--cs-gray2)" }}
+                        title={s.prompt}
+                      >
+                        {s.prompt}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
         )}
         {messages.map((msg, i) => (
           <div
@@ -286,7 +343,7 @@ export default function AIChatPanel() {
       >
         <input
           type="text"
-          placeholder="ASK ABOUT RISK, TRACTS, TRENDS..."
+          placeholder={`ASK ABOUT RISK, ${cityCfg.geographyUnitPlural.toUpperCase()}, TRENDS...`}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSend()}

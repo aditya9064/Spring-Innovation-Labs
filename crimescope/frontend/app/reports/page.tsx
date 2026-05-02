@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useRef } from "react";
-import NavHeader from "../../components/nav-header";
 import { useAppStore } from "../../lib/store";
 import { useReportSummary, usePersonaDecision, useLiveEvents, useScores, useChallenges } from "../../lib/hooks";
 import { createChallenge, createAuditEntry } from "../../lib/api";
+import { getCity } from "../../lib/cities";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   tractRiskPackage as defaultPkg,
@@ -83,9 +83,12 @@ export default function ReportsPage() {
   const [search, setSearch] = useState("");
   const reportTract = useAppStore((s) => s.reportTract);
   const searchResult = useAppStore((s) => s.searchResult);
+  const city = useAppStore((s) => s.city);
+  const cityCfg = getCity(city);
   const { data: allScores = [] } = useScores();
 
-  const activeRegionId = reportTract || search.trim() || defaultPkg.regionId;
+  const activeRegionId =
+    reportTract || search.trim() || allScores[0]?.tract_geoid || cityCfg.defaultRegionId;
 
   const { data: apiSummary } = useReportSummary(activeRegionId);
   const { data: apiDecision } = usePersonaDecision(activeRegionId);
@@ -130,8 +133,7 @@ export default function ReportsPage() {
   ];
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden" style={{ background: "var(--cs-bg)" }}>
-      <NavHeader />
+    <div className="flex flex-col flex-1 overflow-hidden" style={{ background: "var(--cs-bg)" }}>
 
       {/* Search Bar */}
       <div
@@ -144,11 +146,11 @@ export default function ReportsPage() {
         }}
       >
         <span className="text-[9px] font-bold tracking-[1px] uppercase" style={{ color: "var(--cs-accent)" }}>
-          TRACT:
+          {cityCfg.geographyUnit.toUpperCase()}:
         </span>
         <input
           type="text"
-          placeholder="ENTER TRACT ID (e.g. 17031839100)..."
+          placeholder={`ENTER ${cityCfg.geographyUnit.toUpperCase()} ID (e.g. ${cityCfg.defaultRegionId})...`}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="flex-1 text-[11px] px-2 py-1 outline-none"
@@ -180,7 +182,7 @@ export default function ReportsPage() {
               {searchResult.address}
             </span>
             <span className="text-[10px]" style={{ color: "var(--cs-gray2)" }}>
-              · TRACT {searchResult.geoid}
+              · {cityCfg.geographyUnit.toUpperCase()} {searchResult.geoid}
             </span>
           </div>
         )}
@@ -188,7 +190,7 @@ export default function ReportsPage() {
         {/* API Summary Banner */}
         {apiSummary && (
           <>
-            <PanelHeader title="EXECUTIVE SUMMARY" meta="CHICAGO" />
+            <PanelHeader title="EXECUTIVE SUMMARY" meta={cityCfg.shortLabel} />
             <PanelBody>
               <div className="flex items-baseline gap-3 mb-2">
                 <span className="text-base font-bold" style={{ color: "var(--cs-text)" }}>
@@ -419,8 +421,29 @@ export default function ReportsPage() {
         <ChallengeSection regionId={activeRegionId} riskScore={pkg.mlScore} riskTier={pkg.riskLevel} />
 
         {/* Export Actions */}
-        <PanelHeader title="EXPORT" meta="DOWNLOAD REPORT" />
+        <PanelHeader title="EXPORT" meta="PERSONA-SPECIFIC REPORTS" />
         <PanelBody>
+          <div className="text-[9px] mb-2" style={{ color: "var(--cs-gray2)", fontFamily: "var(--cs-mono)" }}>
+            Generate a downloadable brief tailored to a specific persona.
+          </div>
+          <div className="grid grid-cols-2 gap-2 mb-3" style={{ fontFamily: "var(--cs-mono)" }}>
+            {[
+              { persona: "INSURER", desc: "Tract review, pricing guidance, underwriting notes" },
+              { persona: "BUYER", desc: "Neighborhood summary, stability assessment" },
+              { persona: "BUSINESS", desc: "Site risk summary, operating exposure" },
+              { persona: "PLANNER", desc: "Hotspot movement brief, intervention priority" },
+            ].map((p) => (
+              <button
+                key={p.persona}
+                onClick={() => exportCSV(activeRegionId, pkg, decision)}
+                className="text-left px-2.5 py-2 transition-colors"
+                style={{ background: "var(--cs-panel2)", border: "1px solid var(--cs-border)" }}
+              >
+                <div className="text-[9px] font-bold tracking-wide mb-0.5" style={{ color: "var(--cs-accent)" }}>{p.persona} BRIEF</div>
+                <div className="text-[8px]" style={{ color: "var(--cs-gray2)" }}>{p.desc}</div>
+              </button>
+            ))}
+          </div>
           <div className="flex gap-2" style={{ fontFamily: "var(--cs-mono)" }}>
             <button
               onClick={() => exportCSV(activeRegionId, pkg, decision)}

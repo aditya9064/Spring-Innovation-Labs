@@ -1,0 +1,43 @@
+# CrimeScope UK & Wales — Databricks Asset Bundle
+#
+# Defines:
+#   - Lakeflow Workflow `crimescope_uk_pipeline` running notebooks 02 -> 06
+#   - Model Serving endpoint `crimescope-uk-risk` backed by the UC champion model
+#
+# Deploy:
+#   databricks bundle validate --profile team_varanasi -t prod
+#   databricks bundle deploy   --profile team_varanasi -t prod
+#   databricks bundle run crimescope_uk_pipeline --profile team_varanasi -t prod
+bundle:
+  name: crimescope-uk
+
+include:
+  - resources/*.yml
+
+variables:
+  catalog:
+    default: varanasi
+  schema:
+    default: default
+  notebook_root:
+    description: Workspace folder where the UK ML notebooks live.
+    default: /Workspace/Shared/Team_varanasi/ML
+  serving_endpoint_name:
+    default: crimescope-uk-risk
+
+targets:
+  dev:
+    default: true
+    mode: development
+    workspace:
+      profile: team_varanasi
+      host: https://dbc-42cdc781-8591.cloud.databricks.com
+
+  prod:
+    mode: production
+    workspace:
+      profile: team_varanasi
+      host: https://dbc-42cdc781-8591.cloud.databricks.com
+      root_path: /Workspace/Shared/Team_varanasi/.bundle/${bundle.name}/${bundle.target}
+    run_as:
+      user_name: adityamiriyala08@gmail.com

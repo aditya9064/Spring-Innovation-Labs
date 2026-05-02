@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import NavHeader from "../../components/nav-header";
+import { useEffect, useState } from "react";
 import { useInterventions, useScores } from "../../lib/hooks";
+import { useAppStore } from "../../lib/store";
+import { getCity } from "../../lib/cities";
 import { runSimulation } from "../../lib/api";
 import type { SimulationResult } from "../../lib/api";
 
@@ -21,7 +22,16 @@ function PanelHeader({ title, meta }: { title: string; meta?: string }) {
 export default function SimulatorPage() {
   const { data: interventions = [] } = useInterventions();
   const { data: scores = [] } = useScores();
-  const [tractId, setTractId] = useState("17031839100");
+  const city = useAppStore((s) => s.city);
+  const cityCfg = getCity(city);
+  const [tractId, setTractId] = useState<string>(cityCfg.defaultRegionId);
+
+  useEffect(() => {
+    if (scores.length > 0 && !scores.some((s) => s.tract_geoid === tractId)) {
+      setTractId(scores[0].tract_geoid);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [city, scores]);
   const [selected, setSelected] = useState<Record<string, number>>({});
   const [result, setResult] = useState<SimulationResult | null>(null);
   const [loading, setLoading] = useState(false);
@@ -46,6 +56,7 @@ export default function SimulatorPage() {
       const res = await runSimulation(
         tractId,
         Object.entries(selected).map(([id, intensity]) => ({ id, intensity })),
+        city,
       );
       setResult(res);
     } catch {
@@ -57,8 +68,7 @@ export default function SimulatorPage() {
   const tract = scores.find((s) => s.tract_geoid === tractId);
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden" style={{ background: "var(--cs-bg)" }}>
-      <NavHeader />
+    <div className="flex flex-col flex-1 overflow-hidden" style={{ background: "var(--cs-bg)" }}>
 
       <PanelHeader title="COUNTERFACTUAL ACTION SIMULATOR" meta="WHAT-IF SCENARIO MODELLING" />
       <div className="px-3.5 py-2 shrink-0" style={{ background: "var(--cs-bg)", borderBottom: "1px solid var(--cs-border)", fontFamily: "var(--cs-mono)" }}>
@@ -72,7 +82,7 @@ export default function SimulatorPage() {
         <div className="flex flex-col" style={{ width: "50%", borderRight: "1px solid var(--cs-border)" }}>
           {/* Tract Selector */}
           <div className="flex items-center gap-2 px-3 shrink-0" style={{ height: 36, background: "var(--cs-panel)", borderBottom: "1px solid var(--cs-border)", fontFamily: "var(--cs-mono)" }}>
-            <span className="text-[9px] font-bold tracking-[1px] uppercase" style={{ color: "var(--cs-accent)" }}>TRACT:</span>
+            <span className="text-[9px] font-bold tracking-[1px] uppercase" style={{ color: "var(--cs-accent)" }}>{cityCfg.geographyUnit.toUpperCase()}:</span>
             <select
               value={tractId}
               onChange={(e) => { setTractId(e.target.value); setResult(null); }}

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { Providers } from "../lib/providers";
+import AppShellWrapper from "../components/app-shell-wrapper";
 
 export const metadata: Metadata = {
   title: "CRIMESCOPE — Intelligence Terminal",
@@ -28,7 +29,9 @@ export default function RootLayout({
         />
       </head>
       <body className="antialiased">
-        <Providers>{children}</Providers>
+        <Providers>
+          <AppShellWrapper>{children}</AppShellWrapper>
+        </Providers>
       </body>
     </html>
   );

@@ -6,7 +6,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
-from app.core.data_store import get_audit_entries, add_audit_entry, _check_db
+from app.core.data_store import DEFAULT_CITY, get_audit_entries, add_audit_entry, _check_db
 
 router = APIRouter()
 
@@ -42,7 +42,7 @@ def list_audit_trail(
     region_id: str | None = Query(default=None),
     limit: int = Query(default=50, le=200),
 ):
-    if _check_db():
+    if _check_db(DEFAULT_CITY):
         return get_audit_entries(region_id=region_id, limit=limit)
 
     items = _audit_log
@@ -59,7 +59,7 @@ def create_audit_entry_route(entry: AuditEntry):
         **entry.model_dump(),
     }
 
-    if _check_db():
+    if _check_db(DEFAULT_CITY):
         add_audit_entry(record)
     else:
         _audit_log.append(record)
@@ -69,7 +69,7 @@ def create_audit_entry_route(entry: AuditEntry):
 
 @router.get("/stats")
 def audit_stats():
-    if _check_db():
+    if _check_db(DEFAULT_CITY):
         entries = get_audit_entries(limit=10000)
     else:
         entries = _audit_log

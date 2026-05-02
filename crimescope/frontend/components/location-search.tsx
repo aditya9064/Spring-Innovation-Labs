@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAppStore } from "../lib/store";
+import { getCity } from "../lib/cities";
 
 type NominatimResult = {
   place_id: number;
@@ -33,31 +34,37 @@ export default function LocationSearch() {
   const searchResult = useAppStore((s) => s.searchResult);
   const setSearchResult = useAppStore((s) => s.setSearchResult);
   const setReportTract = useAppStore((s) => s.setReportTract);
+  const city = useAppStore((s) => s.city);
+  const cityCfg = getCity(city);
 
-  const geocode = useCallback((value: string) => {
-    if (timerRef.current) clearTimeout(timerRef.current);
-    if (value.length < 3) {
-      setResults([]);
-      setOpen(false);
-      return;
-    }
-    timerRef.current = setTimeout(async () => {
-      setBusy(true);
-      try {
-        const url =
-          `https://nominatim.openstreetmap.org/search?` +
-          `q=${encodeURIComponent(value + ", Chicago")}&format=json&limit=6` +
-          `&viewbox=-88.0,41.6,-87.3,42.1&bounded=1`;
-        const res = await fetch(url);
-        const data: NominatimResult[] = await res.json();
-        setResults(data);
-        setOpen(data.length > 0);
-      } catch {
+  const geocode = useCallback(
+    (value: string) => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      if (value.length < 3) {
         setResults([]);
+        setOpen(false);
+        return;
       }
-      setBusy(false);
-    }, 400);
-  }, []);
+      const [lngMin, latMin, lngMax, latMax] = cityCfg.searchBbox;
+      timerRef.current = setTimeout(async () => {
+        setBusy(true);
+        try {
+          const url =
+            `https://nominatim.openstreetmap.org/search?` +
+            `q=${encodeURIComponent(value + cityCfg.searchSuffix)}&format=json&limit=6` +
+            `&viewbox=${lngMin},${latMin},${lngMax},${latMax}&bounded=1`;
+          const res = await fetch(url);
+          const data: NominatimResult[] = await res.json();
+          setResults(data);
+          setOpen(data.length > 0);
+        } catch {
+          setResults([]);
+        }
+        setBusy(false);
+      }, 400);
+    },
+    [cityCfg.searchBbox, cityCfg.searchSuffix],
+  );
 
   const handleChange = (value: string) => {
     setQuery(value);
@@ -74,7 +81,7 @@ export default function LocationSearch() {
     setOpen(false);
     setResults([]);
     setNoTract(false);
-    setFlyTo({ lng, lat, zoom: 14, address: short });
+    setFlyTo({ lng, lat, zoom: cityCfg.searchZoom, address: short });
   };
 
   const handleClear = () => {
@@ -240,7 +247,7 @@ export default function LocationSearch() {
               className="text-[10px] mb-2.5"
               style={{ color: "var(--cs-gray2)" }}
             >
-              TRACT {searchResult.geoid} · {searchResult.name}
+              {cityCfg.geographyUnit.toUpperCase()} {searchResult.geoid} · {searchResult.name}
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -293,10 +300,10 @@ export default function LocationSearch() {
             color: "var(--cs-gray2)",
           }}
         >
-          NO TRACT DATA AVAILABLE FOR THIS LOCATION.
+          {cityCfg.searchEmptyMessage}
           <br />
           <span style={{ color: "var(--cs-gray3)" }}>
-            Try a different address within Chicago city limits.
+            Try a different address within {cityCfg.scopeLabel}.
           </span>
         </div>
       )}

@@ -16,8 +16,10 @@ export type TrustPassport = {
 
 export type TractRiskPackage = {
   regionId: string;
+  regionType?: string;
   regionName: string;
   city: string;
+  timeHorizonDays?: number;
   riskLevel: string;
   baselineScore: number;
   mlScore: number;
@@ -37,6 +39,7 @@ export type TractRiskPackage = {
     summary: string;
     topChanges: string[];
   };
+  updatedAt?: string;
 };
 
 export type LiveEvent = {

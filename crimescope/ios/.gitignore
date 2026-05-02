@@ -1,0 +1,35 @@
+## Xcode
+*.xcodeproj/*
+!*.xcodeproj/project.pbxproj
+!*.xcodeproj/xcshareddata/
+!*.xcodeproj/project.xcworkspace/
+!*.xcodeproj/project.xcworkspace/xcshareddata
+*.xcworkspace/xcuserdata/
+xcuserdata/
+DerivedData/
+build/
+*.xcuserstate
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+## Swift Package Manager
+.build/
+Packages/
+Package.resolved
+.swiftpm/
+
+## XcodeGen — the .xcodeproj is regenerated, do not commit
+CrimeScope.xcodeproj/
+
+## macOS
+.DS_Store
+
+## Editor
+.vscode/
+.idea/
+
+## Local
+*.log

@@ -7,6 +7,7 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
 from app.core.data_store import (
+    DEFAULT_CITY,
     get_challenge_entries,
     add_challenge_entry,
     update_challenge_entry,
@@ -48,7 +49,7 @@ def list_challenges(
     region_id: str | None = Query(default=None),
     status: str | None = Query(default=None),
 ):
-    if _check_db():
+    if _check_db(DEFAULT_CITY):
         return get_challenge_entries(region_id=region_id, status=status)
 
     items = _challenges
@@ -69,7 +70,7 @@ def create_challenge(req: ChallengeRequest):
         "reviewer_notes": None,
     }
 
-    if _check_db():
+    if _check_db(DEFAULT_CITY):
         add_challenge_entry(record)
     else:
         _challenges.append(record)
@@ -79,7 +80,7 @@ def create_challenge(req: ChallengeRequest):
 
 @router.put("/{challenge_id}", response_model=ChallengeRecord)
 def review_challenge(challenge_id: str, review: ChallengeReview):
-    if _check_db():
+    if _check_db(DEFAULT_CITY):
         updated = update_challenge_entry(challenge_id, review.status, review.reviewer_notes)
         if updated:
             return updated
@@ -95,7 +96,7 @@ def review_challenge(challenge_id: str, review: ChallengeReview):
 
 @router.get("/stats")
 def challenge_stats():
-    if _check_db():
+    if _check_db(DEFAULT_CITY):
         entries = get_challenge_entries()
     else:
         entries = _challenges

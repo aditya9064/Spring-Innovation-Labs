@@ -13,6 +13,7 @@ router = APIRouter()
 class SimulationRequest(BaseModel):
     region_id: str
     interventions: list[dict[str, Any]]
+    city: str | None = None
 
 
 class SimulationResult(BaseModel):
@@ -62,8 +63,11 @@ def list_interventions():
 
 
 @router.post("/run", response_model=SimulationResult)
-def run_simulation(req: SimulationRequest):
-    score = get_score_by_tract(req.region_id)
+def run_simulation(req: SimulationRequest, city: str | None = Query(default=None)):
+    # Accept ``city`` from either the query string or the request body so the
+    # simulator works in multi-city deployments. Body wins when both are set.
+    resolved_city = req.city or city
+    score = get_score_by_tract(req.region_id, city=resolved_city)
     if not score:
         raise HTTPException(404, f"Tract {req.region_id} not found")
 

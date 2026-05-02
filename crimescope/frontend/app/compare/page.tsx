@@ -1,10 +1,18 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import NavHeader from "../../components/nav-header";
 import { useCompare, useScores } from "../../lib/hooks";
 import { useAppStore } from "../../lib/store";
+import { getCity } from "../../lib/cities";
 import type { CompareSnapshot } from "../../lib/api";
+
+const PERSONA_CONFLICT_LABELS: Record<string, string> = {
+  insurer: "Quote / reprice / review",
+  resident: "Caution / monitor",
+  buyer: "Invest / wait / avoid",
+  business: "Site / relocate",
+  planner: "Intervene / monitor",
+};
 
 function PanelHeader({ title, meta }: { title: string; meta?: string }) {
   return (
@@ -163,9 +171,15 @@ function SnapshotColumn({ snap, label }: { snap: CompareSnapshot; label: string 
 export default function ComparePage() {
   const storeLeft = useAppStore((s) => s.compareLeft);
   const storeRight = useAppStore((s) => s.compareRight);
-  const [leftId, setLeftId] = useState(storeLeft || "17031839100");
-  const [rightId, setRightId] = useState(storeRight || "17031320102");
+  const city = useAppStore((s) => s.city);
+  const cityCfg = getCity(city);
   const { data: scores = [] } = useScores();
+
+  const fallbackLeft = scores[0]?.tract_geoid || cityCfg.defaultRegionId;
+  const fallbackRight = scores[1]?.tract_geoid || scores[0]?.tract_geoid || cityCfg.defaultRegionId;
+
+  const [leftId, setLeftId] = useState(storeLeft || fallbackLeft);
+  const [rightId, setRightId] = useState(storeRight || fallbackRight);
 
   useEffect(() => {
     if (storeLeft) setLeftId(storeLeft);
@@ -173,6 +187,12 @@ export default function ComparePage() {
   useEffect(() => {
     if (storeRight) setRightId(storeRight);
   }, [storeRight]);
+  // When the city changes, reset selectors to fresh fallbacks for that city.
+  useEffect(() => {
+    if (!storeLeft) setLeftId(fallbackLeft);
+    if (!storeRight) setRightId(fallbackRight);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [city]);
   const { data: comparison, isLoading } = useCompare(leftId, rightId);
 
   const leftOptions = scores.filter((s) =>
@@ -182,8 +202,7 @@ export default function ComparePage() {
   );
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden" style={{ background: "var(--cs-bg)" }}>
-      <NavHeader />
+    <div className="flex flex-col flex-1 overflow-hidden" style={{ background: "var(--cs-bg)" }}>
 
       {/* Tract Selectors */}
       <div
@@ -194,7 +213,7 @@ export default function ComparePage() {
           <span className="text-[9px] font-bold tracking-[1px] uppercase" style={{ color: "var(--cs-accent)" }}>A:</span>
           <input
             type="text"
-            placeholder="TRACT ID (e.g. 17031839100)..."
+            placeholder={`${cityCfg.geographyUnit.toUpperCase()} ID (e.g. ${fallbackLeft})...`}
             value={leftId}
             onChange={(e) => setLeftId(e.target.value)}
             className="flex-1 text-[11px] px-2 py-1 outline-none"
@@ -205,7 +224,7 @@ export default function ComparePage() {
           <span className="text-[9px] font-bold tracking-[1px] uppercase" style={{ color: "var(--cs-accent)" }}>B:</span>
           <input
             type="text"
-            placeholder="TRACT ID (e.g. 17031320102)..."
+            placeholder={`${cityCfg.geographyUnit.toUpperCase()} ID (e.g. ${fallbackRight})...`}
             value={rightId}
             onChange={(e) => setRightId(e.target.value)}
             className="flex-1 text-[11px] px-2 py-1 outline-none"
@@ -241,6 +260,32 @@ export default function ComparePage() {
           <span className="text-[10px]" style={{ color: "var(--cs-gray1)" }}>
             {comparison.summary}
           </span>
+        </div>
+      )}
+
+      {/* Persona Conflict Row */}
+      {comparison && (
+        <div className="flex shrink-0" style={{ borderBottom: "1px solid var(--cs-border)", fontFamily: "var(--cs-mono)" }}>
+          <div className="flex-1 px-3.5 py-2" style={{ borderRight: "1px solid var(--cs-border)" }}>
+            <div className="text-[8px] font-semibold uppercase tracking-[1.2px] mb-0.5" style={{ color: "var(--cs-gray2)" }}>PERSONA CONFLICT</div>
+            <div className="text-[10px]" style={{ color: comparison.left.recommendation.label !== comparison.right.recommendation.label ? "var(--cs-red)" : "var(--cs-green)" }}>
+              {comparison.left.recommendation.label !== comparison.right.recommendation.label
+                ? `DIVERGENT — A: ${comparison.left.recommendation.label} vs B: ${comparison.right.recommendation.label}`
+                : `ALIGNED — Both: ${comparison.left.recommendation.label}`}
+            </div>
+          </div>
+          <div className="flex-1 px-3.5 py-2" style={{ borderRight: "1px solid var(--cs-border)" }}>
+            <div className="text-[8px] font-semibold uppercase tracking-[1.2px] mb-0.5" style={{ color: "var(--cs-gray2)" }}>CONFIDENCE DIFF</div>
+            <div className="text-[10px] font-bold" style={{ color: "var(--cs-amber)" }}>
+              {Math.abs((comparison.left.confidence - comparison.right.confidence) * 100).toFixed(0)}% gap
+            </div>
+          </div>
+          <div className="flex-1 px-3.5 py-2">
+            <div className="text-[8px] font-semibold uppercase tracking-[1.2px] mb-0.5" style={{ color: "var(--cs-gray2)" }}>TREND DIFF</div>
+            <div className="text-[10px] font-bold" style={{ color: "var(--cs-cyan)" }}>
+              {Math.abs(comparison.left.freshnessHours - comparison.right.freshnessHours)}h freshness gap
+            </div>
+          </div>
         </div>
       )}
 

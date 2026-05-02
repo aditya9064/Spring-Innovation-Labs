@@ -1,0 +1,67 @@
+name: CrimeScope
+options:
+  bundleIdPrefix: com.crimescope
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+  developmentLanguage: en
+  groupSortPosition: top
+
+settings:
+  base:
+    SWIFT_VERSION: "5.10"
+    SWIFT_STRICT_CONCURRENCY: minimal
+    ENABLE_USER_SCRIPT_SANDBOXING: "YES"
+    DEVELOPMENT_TEAM: NCHGWJQY94
+    CODE_SIGN_STYLE: Automatic
+    CODE_SIGN_IDENTITY: "Apple Development"
+
+targets:
+  CrimeScope:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: CrimeScope
+        excludes:
+          - "**/.DS_Store"
+    resources:
+      - path: CrimeScope/Resources/Assets.xcassets
+    info:
+      path: CrimeScope/Resources/Info.plist
+      properties:
+        CFBundleDisplayName: CrimeScope
+        CFBundleShortVersionString: "0.1.0"
+        CFBundleVersion: "1"
+        UILaunchScreen:
+          UIColorName: BackgroundPrimary
+        UIUserInterfaceStyle: Dark
+        UIRequiresFullScreen: false
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        ITSAppUsesNonExemptEncryption: false
+        NSLocationWhenInUseUsageDescription: "CrimeScope can use your approximate location to highlight nearby risk regions on the map. You can decline; the app works without it."
+        NSFaceIDUsageDescription: "Unlock CrimeScope and confirm sensitive overrides with Face ID."
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+          NSAllowsArbitraryLoads: true
+        NSLocalNetworkUsageDescription: "CrimeScope can connect to a local FastAPI backend during development."
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.crimescope.app
+        PRODUCT_NAME: CrimeScope
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        ENABLE_PREVIEWS: "YES"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        GENERATE_INFOPLIST_FILE: "NO"
+        INFOPLIST_KEY_UILaunchScreen_Generation: "YES"
+        INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: "YES"
+        SWIFT_EMIT_LOC_STRINGS: "YES"

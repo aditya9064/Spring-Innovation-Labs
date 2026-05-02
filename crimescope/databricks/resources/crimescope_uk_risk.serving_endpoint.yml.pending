@@ -1,0 +1,25 @@
+# Model Serving endpoint for the UK LSOA risk model.
+#
+# Backed by the @champion alias of varanasi.default.crimescope_uk_risk_model_lsoa,
+# scale-to-zero. Inference traffic capture is configured separately via the
+# AI Gateway (legacy auto_capture_config has been deprecated by Databricks).
+resources:
+  model_serving_endpoints:
+    crimescope_uk_risk:
+      name: ${var.serving_endpoint_name}
+      config:
+        served_entities:
+          - entity_name: ${var.catalog}.${var.schema}.crimescope_uk_risk_model_lsoa
+            entity_version: '1'
+            workload_size: Small
+            scale_to_zero_enabled: true
+        traffic_config:
+          routes:
+            - served_model_name: crimescope_uk_risk_model_lsoa-1
+              traffic_percentage: 100
+
+      tags:
+        - key: product
+          value: crimescope
+        - key: scope
+          value: uk
